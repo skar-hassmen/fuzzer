@@ -10,8 +10,15 @@
 #include "fuzzer.hpp"
 
 
+std::string startStateConfig;
+
+std::string ReturnStartStateConfig(void) {
+	return startStateConfig;
+}
+
+
 int GetSizeHeaderOfConfig(std::string buffer) {
-	return buffer.find("\\start");
+	return buffer.find("/start");
 }
 
 
@@ -33,13 +40,19 @@ void AutoMode(std::string buffer) {
 			int sizeBytes = RandomInt(1, 4);
 			if (sizeBytes == 1) {
 				std::vector<int> boundaryBytes = { 0x00, 0xFF };
-				int numberByte = RandomInt(0, 1);
+				int numberByte = RandomInt(0, boundaryBytes.size() - 1);
 				int index = RandomInt(1, lengthHeader - sizeBytes);
+				int offset = RandomInt(1, (int)(lengthHeader - sizeBytes) / 2);
 				buffer = ChangeOneByte(buffer, (char)boundaryBytes[numberByte], index);
+				
+				while (index + offset <= lengthHeader - sizeBytes) {
+					index += offset;
+					buffer = ChangeOneByte(buffer, (char)boundaryBytes[numberByte], index);
+				}
 			}
 			else if (sizeBytes == 2) {
 				std::vector<std::vector<int>> boundaryBytes = { {0xFF, 0xFF}, {0x7F, 0xFF}, {0x80, 0x00}, {0x7F, 0xFE} };
-				int numberByte = RandomInt(0, 3);
+				int numberByte = RandomInt(0, boundaryBytes.size() - 1);
 				int index = RandomInt(1, lengthHeader - sizeBytes);
 				buffer = ChangeBytes(buffer, boundaryBytes[numberByte], index);
 			}
@@ -56,25 +69,21 @@ void AutoMode(std::string buffer) {
 		}
 		else {
 			std::vector<int> Bytes;
-			int countSymbols = RandomInt(1, 200);
+			int countSymbols = RandomInt(1, 500);
 
 			for (int i = 0; i < countSymbols; i++)
-				Bytes.push_back(0x44);
+				Bytes.push_back(0x24);
 
-			buffer = AddBytesToEnd(buffer, Bytes, buffer.size());
+			buffer = AddBytesToEnd(buffer, Bytes, buffer.size() - 1);
 		}
 
 		WriteDataToConfigFile(pathDir + "\\" + configName, buffer);
-		if (DebugMode()) return;
+		if (DebugMode() == true) return;
+
+		WriteDataToConfigFile(pathDir + "\\" + configName, ReturnStartStateConfig());
 	}
 }
 
-
-std::string startStateConfig;
-
-std::string ReturnStartStateConfig(void) {
-	return startStateConfig;
-}
 
 void PrintMainMenu(void) {
 	std::cout << "======= Main menu =======" << std::endl;
@@ -194,7 +203,7 @@ void ChooseMove(void) {
 				bytes.push_back(byte);
 			}
 
-			config = AddBytesToEnd(config, bytes, config.size());
+			config = AddBytesToEnd(config, bytes, config.size() - 1);
 			WriteDataToConfigFile(pathDir + "\\" + configName, config);
 		}
 		else if (number == 6) {
