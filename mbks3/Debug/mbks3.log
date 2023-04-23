@@ -1,0 +1,6 @@
+﻿  fuzzer.cpp
+C:\Users\mbks\source\repos\mbks3\mbks3\fuzzer.cpp(12,31): warning C4101: error: неиспользованная локальная переменная
+C:\Users\mbks\source\repos\mbks3\mbks3\fuzzer.cpp(20,20): warning C4018: <: несоответствие типов со знаком и без знака
+C:\Users\mbks\source\repos\mbks3\mbks3\fuzzer.cpp(33,31): warning C4101: error: неиспользованная локальная переменная
+C:\Users\mbks\source\repos\mbks3\mbks3\fuzzer.cpp(41,20): warning C4018: <: несоответствие типов со знаком и без знака
+  mbks3.vcxproj -> C:\Users\mbks\source\repos\mbks3\Debug\mbks3.exe
