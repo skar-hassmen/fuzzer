@@ -2,11 +2,73 @@
 
 #include <iostream>
 #include <Windows.h>
+#include <random>
 
 #include "config.hpp"
 #include "debug.hpp"
 #include "files.hpp"
 #include "fuzzer.hpp"
+
+
+int GetSizeHeaderOfConfig(std::string buffer) {
+	return buffer.find("\\start");
+}
+
+
+int RandomInt(int left, int right) {
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dist(left, right);
+	return dist(gen);
+}
+
+
+void AutoMode(std::string buffer) {
+	int lengthHeader = GetSizeHeaderOfConfig(buffer);
+
+	while (1) {
+		int variantMove = RandomInt(1, 2);
+
+		if (variantMove == 1) {
+			int sizeBytes = RandomInt(1, 4);
+			if (sizeBytes == 1) {
+				std::vector<int> boundaryBytes = { 0x00, 0xFF };
+				int numberByte = RandomInt(0, 1);
+				int index = RandomInt(1, lengthHeader - sizeBytes);
+				buffer = ChangeOneByte(buffer, (char)boundaryBytes[numberByte], index);
+			}
+			else if (sizeBytes == 2) {
+				std::vector<std::vector<int>> boundaryBytes = { {0xFF, 0xFF}, {0x7F, 0xFF}, {0x80, 0x00}, {0x7F, 0xFE} };
+				int numberByte = RandomInt(0, 3);
+				int index = RandomInt(1, lengthHeader - sizeBytes);
+				buffer = ChangeBytes(buffer, boundaryBytes[numberByte], index);
+			}
+			else if (sizeBytes == 3) {
+				std::vector<int> boundaryBytes = { 0xFF, 0xFF, 0xFF };
+				int index = RandomInt(1, lengthHeader - sizeBytes);
+				buffer = ChangeBytes(buffer, boundaryBytes, index);
+			}
+			else {
+				std::vector<int> boundaryBytes = { 0xFF, 0xFF, 0xFF, 0xFF };
+				int index = RandomInt(1, lengthHeader - sizeBytes);
+				buffer = ChangeBytes(buffer, boundaryBytes, index);
+			}
+		}
+		else {
+			std::vector<int> Bytes;
+			int countSymbols = RandomInt(1, 200);
+
+			for (int i = 0; i < countSymbols; i++)
+				Bytes.push_back(0x44);
+
+			buffer = AddBytesToEnd(buffer, Bytes, buffer.size());
+		}
+
+		WriteDataToConfigFile(pathDir + "\\" + configName, buffer);
+		if (DebugMode()) return;
+	}
+}
+
 
 std::string startStateConfig;
 
@@ -37,7 +99,7 @@ void PrintMainMenu(void) {
 int InputOperation(void) {
 	int number;
 	std::cout << "Input operation\n> ";
-	std::cin >> number;
+	std::cin >> std::dec >> number;
 	
 	return number;
 }
@@ -59,6 +121,7 @@ void ChooseMove(void) {
 			std::cin >> std::hex >> byte;
 
 			config = ChangeOneByte(config, (char)byte, index);
+			WriteDataToConfigFile(pathDir + "\\" + configName, config);
 		}
 		else if (number == 2) {
 			int index;
@@ -69,17 +132,18 @@ void ChooseMove(void) {
 			std::cout << "Input len\n> ";
 			std::cin >> std::dec >> len;
 
-			std::vector<char> bytes;
+			std::vector<int> bytes;
 
 			for (int i = 0; i < len; i++) {
 				int byte;
 				std::cout << "Input byte " << "[" << i + 1 << "]" << "\n> ";
 				std::cin >> std::hex >> byte;
 
-				bytes.push_back((char)byte);
+				bytes.push_back(byte);
 			}
 
 			config = ChangeBytes(config, bytes, index);
+			WriteDataToConfigFile(pathDir + "\\" + configName, config);
 		}
 		else if (number == 3) {
 			int index;
@@ -91,6 +155,7 @@ void ChooseMove(void) {
 			std::cin >> std::hex >> byte;
 
 			config = AddOneByte(config, (char)byte, index);
+			WriteDataToConfigFile(pathDir + "\\" + configName, config);
 		}
 		else if (number == 4) {
 			int index;
@@ -101,49 +166,52 @@ void ChooseMove(void) {
 			std::cout << "Input len\n> ";
 			std::cin >> std::dec >> len;
 
-			std::vector<char> bytes;
+			std::vector<int> bytes;
 
 			for (int i = 0; i < len; i++) {
 				int byte;
 				std::cout << "Input byte " << "[" << i + 1 << "]" << "\n> ";
 				std::cin >> std::hex >> byte;
 
-				bytes.push_back((char)byte);
+				bytes.push_back(byte);
 			}
 
 			config = AddBytes(config, bytes, index);
+			WriteDataToConfigFile(pathDir + "\\" + configName, config);
 		}
 		else if (number == 5) {
 			int len;
 			std::cout << "Input len\n> ";
 			std::cin >> std::dec >> len;
 
-			std::vector<char> bytes;
+			std::vector<int> bytes;
 
 			for (int i = 0; i < len; i++) {
 				int byte;
 				std::cout << "Input byte " << "[" << i + 1 << "]" << "\n> ";
 				std::cin >> std::hex >> byte;
 
-				bytes.push_back((char)byte);
+				bytes.push_back(byte);
 			}
 
 			config = AddBytesToEnd(config, bytes, config.size());
+			WriteDataToConfigFile(pathDir + "\\" + configName, config);
 		}
 		else if (number == 6) {
 			DebugMode();
 		}
 		else if (number == 7) {
-			AutoMode();
+			AutoMode(config);
 		}
 		else if (number == 8) {
 			config = ReturnStartStateConfig();
+			WriteDataToConfigFile(pathDir + "\\" + configName, config);
 		}
 		else if (number == 9) {
 			std::cout << config << std::endl;
 		}
 		else if (number == 10) {
-			exit(0);
+			return;
 		}
 		else {
 			std::cout << "Wrong operation!" << std::endl;
@@ -155,5 +223,6 @@ void ChooseMove(void) {
 int main(void) {
 	startStateConfig = ReadDataFromConfigFile(pathDir + "\\" + configName);
 	ChooseMove();
+	WriteDataToConfigFile(pathDir + "\\" + configName, startStateConfig);
 	return 0;
 }
