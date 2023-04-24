@@ -79,8 +79,6 @@ void AutoMode(std::string buffer) {
 
 		WriteDataToConfigFile(pathDir + "\\" + configName, buffer);
 		if (DebugMode() == true) return;
-
-		WriteDataToConfigFile(pathDir + "\\" + configName, ReturnStartStateConfig());
 	}
 }
 
